@@ -10,7 +10,7 @@ import (
     "regexp"
 )
 
-const debug = true
+const debug = false
 
 func main() {
     args := os.Args[1:]
@@ -30,7 +30,7 @@ func main() {
     }
     changed := goReplace(toFind, toReplace, patterns)
 
-    fmt.Printf("Done! Changed %d files.\n", changed)
+    fmt.Printf("Done! Changed %d file(s).\n", changed)
 }
 
 func goReplace(toFind string, toReplace string, patterns []string) int {
