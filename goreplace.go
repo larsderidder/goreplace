@@ -27,7 +27,12 @@ func main() {
         fmt.Println(to_replace)
         fmt.Println(patterns)
     }
+    changed := goReplace(to_find, to_replace, patterns)
 
+    fmt.Printf("Done! Changed %d files.\n", changed)
+}
+
+func goReplace(to_find string, to_replace string, patterns []string) int {
     ch := make(chan bool)
     files, _ := ioutil.ReadDir(".")
     found := 0
@@ -37,7 +42,7 @@ func main() {
                 match, _ := regexp.Match(pattern, []byte(file.Name()))
                 if match {
                     found += 1
-                    go findReplace(file.Name(), to_find, to_replace, ch)
+                    go findReplaceInFile(file.Name(), to_find, to_replace, ch)
                 }
             }
         }
@@ -49,10 +54,10 @@ func main() {
             changed += 1
         }
     }
-    fmt.Printf("Done! Changed %d files.\n", changed)
+    return changed
 }
 
-func findReplace(filename, to_find, to_replace string, ch chan bool) {
+func findReplaceInFile(filename, to_find, to_replace string, ch chan bool) {
     file, _ := ioutil.ReadFile(filename)
     filecontents := string(file)
     if strings.Contains(filecontents, to_find) {
