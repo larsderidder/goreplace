@@ -10,59 +10,73 @@ import (
     "regexp"
 )
 
+const debug = true
+
 func main() {
-    verbose := true
     args := os.Args[1:]
-    if verbose {
+    if debug {
         fmt.Println(os.Args)
     }
     if len(args) < 3 {
-        panic("Arguments dude!")
+        panic("Usage: goreplace TOFIND TOREPLACE PATTERN...")
     }
-    to_find := args[0]
-    to_replace := args[1]
+    toFind := args[0]
+    toReplace := args[1]
     patterns := args[2:]
-    if verbose {
-        fmt.Println(to_find)
-        fmt.Println(to_replace)
+    if debug {
+        fmt.Println(toFind)
+        fmt.Println(toReplace)
         fmt.Println(patterns)
     }
-    changed := goReplace(to_find, to_replace, patterns)
+    changed := goReplace(toFind, toReplace, patterns)
 
     fmt.Printf("Done! Changed %d files.\n", changed)
 }
 
-func goReplace(to_find string, to_replace string, patterns []string) int {
-    ch := make(chan bool)
+func goReplace(toFind string, toReplace string, patterns []string) int {
+    replaced := make(chan bool)
+    routines := 0
+    for _, filename := range patterns {
+        routines += 1
+        go replaceFile(filename, toFind, toReplace, replaced)
+    }
     files, _ := ioutil.ReadDir(".")
-    found := 0
     for _, file := range files {
         if ! file.IsDir() {
             for _, pattern := range patterns {
                 match, _ := regexp.Match(pattern, []byte(file.Name()))
                 if match {
-                    found += 1
-                    go findReplaceInFile(file.Name(), to_find, to_replace, ch)
+                    routines += 1
+                    go replaceFile(file.Name(), toFind, toReplace, replaced)
                 }
             }
         }
     }
     changed := 0
-    for i := 0; i < found; i++ {
-        result := <-ch
-        if result {
+    for i := 0; i < routines; i++ {
+        if <-replaced {
             changed += 1
         }
     }
     return changed
 }
 
-func findReplaceInFile(filename, to_find, to_replace string, ch chan bool) {
-    file, _ := ioutil.ReadFile(filename)
+func replaceFile(filename, toFind, toReplace string, ch chan bool) {
+    file, err := ioutil.ReadFile(filename)
+    if err != nil {
+        if os.IsNotExist(err) {
+            ch <- false
+            return
+        }
+        panic(err)
+    }
     filecontents := string(file)
-    if strings.Contains(filecontents, to_find) {
-        filecontents = strings.Replace(filecontents, to_find, to_replace, -1)
-        ioutil.WriteFile(filename, []byte(filecontents), 0644)
+    if strings.Contains(filecontents, toFind) {
+        filecontents = strings.Replace(filecontents, toFind, toReplace, -1)
+        err = ioutil.WriteFile(filename, []byte(filecontents), 0644)
+        if err != nil {
+            panic(err)
+        }
         ch <- true
     } else {
         ch <- false
