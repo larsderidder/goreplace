@@ -18,7 +18,8 @@ func main() {
         fmt.Println(os.Args)
     }
     if len(args) < 3 {
-        panic("Usage: goreplace TOFIND TOREPLACE PATTERN...")
+        fmt.Println("Usage: goreplace TOFIND TOREPLACE PATTERN...")
+        os.Exit(0)
     }
     toFind := args[0]
     toReplace := args[1]
