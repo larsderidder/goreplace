@@ -37,8 +37,13 @@ func goReplace(toFind string, toReplace string, patterns []string) int {
     replaced := make(chan bool)
     routines := 0
     for _, filename := range patterns {
-        routines += 1
-        go replaceFile(filename, toFind, toReplace, replaced)
+        fileInfo, err := os.Stat(filename)
+        if err == nil && ! fileInfo.IsDir() {
+            routines += 1
+            go replaceFile(filename, toFind, toReplace, replaced)
+        } else if err != nil && ! os.IsNotExist(err) {
+            panic(err)
+        }
     }
     files, _ := ioutil.ReadDir(".")
     for _, file := range files {
