@@ -45,7 +45,7 @@ func main() {
     flag.Parse()
     if *clean {
         fmt.Println("Cleaning up!")
-        err := exec.Command("rm", "testdata.").Run()
+        err := exec.Command("rm", "*.tmp").Run()
         if err != nil { panic(err) }
         os.Exit(0)
     }
