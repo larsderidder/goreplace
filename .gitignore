@@ -1,2 +1,2 @@
-testdata/
+testdata/*.tmp
 *.test

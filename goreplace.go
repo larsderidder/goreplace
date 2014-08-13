@@ -1,13 +1,11 @@
 package main
 
 import (
-    "bytes"
     "fmt"
-    "os/exec"
-    "os"
     "io/ioutil"
-    "strings"
+    "os"
     "regexp"
+    "strings"
 )
 
 const debug = false
@@ -39,16 +37,16 @@ func goReplace(toFind string, toReplace string, patterns []string) int {
     routines := 0
     for _, filename := range patterns {
         fileInfo, err := os.Stat(filename)
-        if err == nil && ! fileInfo.IsDir() {
+        if err == nil && !fileInfo.IsDir() {
             routines += 1
             go replaceFile(filename, toFind, toReplace, replaced)
-        } else if err != nil && ! os.IsNotExist(err) {
+        } else if err != nil && !os.IsNotExist(err) {
             panic(err)
         }
     }
     files, _ := ioutil.ReadDir(".")
     for _, file := range files {
-        if ! file.IsDir() {
+        if !file.IsDir() {
             for _, pattern := range patterns {
                 match, _ := regexp.Match(pattern, []byte(file.Name()))
                 if match {
@@ -87,12 +85,4 @@ func replaceFile(filename, toFind, toReplace string, ch chan bool) {
     } else {
         ch <- false
     }
-}
-
-func catFile(filename string) {
-    cmd := exec.Command("cat", filename)
-    var out bytes.Buffer
-    cmd.Stdout = &out
-    cmd.Run()
-    fmt.Println(out.String())
 }
