@@ -35,7 +35,26 @@ func main() {
 func goReplace(toFind string, toReplace string, patterns []string) int {
 	replaced := make(chan bool)
 	routines := 0
-	for _, filename := range patterns {
+
+	// Find all files with exact matches and goreplace
+	routines = replaceByExactMatch(toFind, toReplace, patterns, replaced)
+
+	// Find all files that match a pattern and goreplace
+	routines += replaceByPatternMatch(toFind, toReplace, patterns, replaced)
+
+	// Wait for all goroutines to report back.
+	changed := 0
+	for i := 0; i < routines; i++ {
+		if <-replaced {
+			changed += 1
+		}
+	}
+	return changed
+}
+
+func replaceByExactMatch(toFind string, toReplace string, filenames []string, replaced chan bool) int {
+	routines := 0
+	for _, filename := range filenames {
 		fileInfo, err := os.Stat(filename)
 		if err == nil && !fileInfo.IsDir() {
 			routines += 1
@@ -44,6 +63,11 @@ func goReplace(toFind string, toReplace string, patterns []string) int {
 			panic(err)
 		}
 	}
+	return routines
+}
+
+func replaceByPatternMatch(toFind string, toReplace string, patterns []string, replaced chan bool) int {
+	routines := 0
 	files, _ := ioutil.ReadDir(".")
 	for _, file := range files {
 		if !file.IsDir() {
@@ -56,13 +80,7 @@ func goReplace(toFind string, toReplace string, patterns []string) int {
 			}
 		}
 	}
-	changed := 0
-	for i := 0; i < routines; i++ {
-		if <-replaced {
-			changed += 1
-		}
-	}
-	return changed
+	return routines
 }
 
 func replaceFile(filename, toFind, toReplace string, ch chan bool) {
