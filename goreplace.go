@@ -16,31 +16,30 @@ func main() {
 		fmt.Println(os.Args)
 	}
 	if len(args) < 3 {
-		fmt.Println("Usage: goreplace TOFIND TOREPLACE PATTERN...")
+		fmt.Println("Usage: goreplace TOFIND TOREPLACE TARGETS...")
 		os.Exit(0)
 	}
 	toFind := args[0]
 	toReplace := args[1]
-	patterns := args[2:]
+	targets := args[2:]
 	if debug {
 		fmt.Println(toFind)
 		fmt.Println(toReplace)
-		fmt.Println(patterns)
+		fmt.Println(targets)
 	}
-	changed := goReplace(toFind, toReplace, patterns)
+	changed := goReplace(toFind, toReplace, targets)
 
 	fmt.Printf("Done! Changed %d file(s).\n", changed)
 }
 
-func goReplace(toFind string, toReplace string, patterns []string) int {
+func goReplace(toFind string, toReplace string, targets []string) int {
 	replaced := make(chan bool)
-	routines := 0
 
 	// Find all files with exact matches and goreplace
-	routines = replaceByExactMatch(toFind, toReplace, patterns, replaced)
+	routines, unmatched := replaceByExactMatch(toFind, toReplace, targets, replaced)
 
-	// Find all files that match a pattern and goreplace
-	routines += replaceByPatternMatch(toFind, toReplace, patterns, replaced)
+	// Find all files that match leftover target and goreplace
+	routines += replaceByPatternMatch(toFind, toReplace, unmatched, replaced)
 
 	// Wait for all goroutines to report back.
 	changed := 0
@@ -52,8 +51,9 @@ func goReplace(toFind string, toReplace string, patterns []string) int {
 	return changed
 }
 
-func replaceByExactMatch(toFind string, toReplace string, filenames []string, replaced chan bool) int {
+func replaceByExactMatch(toFind string, toReplace string, filenames []string, replaced chan bool) (int, []string) {
 	routines := 0
+	unmatched := make([]string, 0)
 	for _, filename := range filenames {
 		fileInfo, err := os.Stat(filename)
 		if err == nil && !fileInfo.IsDir() {
@@ -61,9 +61,11 @@ func replaceByExactMatch(toFind string, toReplace string, filenames []string, re
 			go replaceFile(filename, toFind, toReplace, replaced)
 		} else if err != nil && !os.IsNotExist(err) {
 			panic(err)
+		} else {
+			unmatched = append(unmatched, filename)
 		}
 	}
-	return routines
+	return routines, unmatched
 }
 
 func replaceByPatternMatch(toFind string, toReplace string, patterns []string, replaced chan bool) int {
